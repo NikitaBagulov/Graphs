@@ -35,7 +35,8 @@ class Dijkstra:
         while current is not None:
             path.insert(0, current)
             current = predecessors[current]
-
+        print(path, distances[target])
         if path[0] != start:
             return None, float('inf') 
+       
         return path, distances[target]

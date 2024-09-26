@@ -1,6 +1,4 @@
 from node import Node
-import matplotlib.pyplot as plt
-import numpy as np
 
 class Graph:
     def __init__(self) -> None:
@@ -17,10 +15,12 @@ class Graph:
     def add_edge(self, begin:Node, end:Node, weight: float):
         if begin in self.nodes and end in self.nodes:
             begin.add_neighbour(end, weight)
+            end.add_neighbour(begin, weight)
 
     def remove_edge(self, begin:Node, end:Node):
         if begin in self.nodes and end in self.nodes:
             begin.remove_neighbour(end)
+            end.remove_neighbour(begin)
 
     def __iter__(self):
         return iter(self.nodes)
@@ -35,32 +35,22 @@ class Graph:
                 edges.append((node.get_name(), neighbour.get_name(), weight))
         return edges
     
-    # def draw_graph(self):
-    #     plt.figure(figsize=(8, 6))
-    #     pos = {}
-    #     num_nodes = len(self.nodes)
-    #     for i, node in enumerate(self.nodes):
-    #         angle = 2 * np.pi * i / num_nodes
-    #         pos[node.get_name()] = (np.cos(angle), np.sin(angle))
+    def load_from_file(self, filepath: str):
+        with open(filepath, 'r') as f:
+            next(f)
+            for line in f:
+                source, target, weight = line.strip().split()
+                source_node = self.get_or_create_node(source)
+                target_node = self.get_or_create_node(target)
+                self.add_edge(source_node, target_node, int(weight))
 
-    #     for node_name, (x, y) in pos.items():
-    #         plt.scatter(x, y, s=2000, color='lightblue', edgecolors='black')
-    #         plt.text(x, y, node_name, fontsize=12, ha='center', va='center')
-
-    #     for node in self:
-    #         for neighbour, weight in node.nb_begin():
-    #             x_start, y_start = pos[node.get_name()]
-    #             x_end, y_end = pos[neighbour.get_name()]
-    #             plt.arrow(x_start, y_start, x_end - x_start, y_end - y_start,
-    #                     head_width=0.05, head_length=0.1, fc='gray', ec='gray')
-    #             mid_x = (x_start + x_end) / 2
-    #             mid_y = (y_start + y_end) / 2
-    #             plt.text(mid_x, mid_y, str(weight), fontsize=10, ha='center', va='center')
-
-    #     plt.title("Визуализация графа с направленными рёбрами")
-    #     plt.axis('equal')
-    #     plt.grid(False)
-    #     plt.show()
+    def get_or_create_node(self, node_name: str) -> Node:
+        for node in self.nodes:
+            if node.get_name() == node_name:
+                return node
+        new_node = Node(node_name)
+        self.add_node(new_node)
+        return new_node
 
     
 
