@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import time
 from graph import Graph
 
 class GraphVisualizer:
