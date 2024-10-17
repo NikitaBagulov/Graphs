@@ -7,10 +7,10 @@ class AntAlgorithm:
         self.graph = graph
         self.num_ants = num_ants
         self.num_iterations = num_iterations
-        self.decay = decay  # Pheromone decay rate
-        self.alpha = alpha  # Influence of pheromone
-        self.beta = beta    # Influence of distance
-        self.pheromones = {edge: 1.0 for edge in self.get_all_edges()}  # Initialize pheromones
+        self.decay = decay
+        self.alpha = alpha
+        self.beta = beta
+        self.pheromones = {edge: 1.0 for edge in self.get_all_edges()}
 
     def get_all_edges(self):
         edges = []
@@ -23,13 +23,14 @@ class AntAlgorithm:
         best_cycle = None
         best_distance = float('inf')
 
-        for _ in range(self.num_iterations):
+        for iteration in range(self.num_iterations):
             all_cycles = []
             for _ in range(self.num_ants):
                 cycle, distance = self.construct_solution()
                 if distance < best_distance:
                     best_distance = distance
                     best_cycle = cycle
+                    print(f"New best distance found: {best_distance} at iteration {iteration + 1}")
                 all_cycles.append((cycle, distance))
             
             self.update_pheromones(all_cycles)
@@ -48,49 +49,51 @@ class AntAlgorithm:
         while unvisited_nodes:
             next_node = self.select_next_node(current_node, unvisited_nodes)
             if next_node is None:
-                break  # No valid next node found; terminate this ant's path
-            
+                return None, float('inf')
+
             cycle.append(next_node)
             total_distance += current_node.neighbours[next_node]
             current_node = next_node
             unvisited_nodes.remove(next_node)
 
-        # Attempt to return to the starting node to complete the cycle
         if start_node in current_node.neighbours:
             total_distance += current_node.neighbours[start_node]
             cycle.append(start_node)
         else:
-            print(f"Cannot return to start node {start_node.get_name()} from {current_node.get_name()}. Cycle incomplete.")
+            return None, float('inf')
 
         return cycle, total_distance
+
+
 
     def select_next_node(self, current_node: Node, unvisited_nodes: set):
         neighbours = [(neighbour, weight) for neighbour, weight in current_node.nb_begin() if neighbour in unvisited_nodes]
         
         if not neighbours:
-            return None  # No valid neighbours left
-        
+            return None
+
         total_pheromone = sum(self.pheromones[(current_node, neighbour)] ** self.alpha * 
-                              (1 / weight) ** self.beta for neighbour, weight in neighbours)
-        
+                            (1 / weight) ** self.beta for neighbour, weight in neighbours)
+
         probabilities = []
-        
         for neighbour, weight in neighbours:
             pheromone_level = self.pheromones[(current_node, neighbour)] ** self.alpha
             desirability = (1 / weight) ** self.beta
             probability = pheromone_level * desirability / total_pheromone
             probabilities.append(probability)
 
-        return random.choices(neighbours, weights=probabilities)[0][0]
+        chosen = random.choices(neighbours, weights=probabilities)[0][0]
+        return chosen
 
     def update_pheromones(self, all_cycles):
         for edge in self.pheromones.keys():
             self.pheromones[edge] *= (1 - self.decay)
 
         for cycle, distance in all_cycles:
-            if distance > 0:  # Ensure we only update pheromones for valid cycles
-                pheromone_deposit = 1 / distance 
+            if cycle and len(set(cycle)) == len(self.graph.nodes) + 1:
+                pheromone_deposit = 1 / distance
                 for i in range(len(cycle) - 1):
                     edge = (cycle[i], cycle[i + 1])
                     if edge in self.pheromones:
                         self.pheromones[edge] += pheromone_deposit
+

@@ -15,12 +15,12 @@ class Graph:
     def add_edge(self, begin:Node, end:Node, weight: float):
         if begin in self.nodes and end in self.nodes:
             begin.add_neighbour(end, weight)
-            end.add_neighbour(begin, weight)
+            # end.add_neighbour(begin, weight)
 
     def remove_edge(self, begin:Node, end:Node):
         if begin in self.nodes and end in self.nodes:
             begin.remove_neighbour(end)
-            end.remove_neighbour(begin)
+            # end.remove_neighbour(begin)
 
     def __iter__(self):
         return iter(self.nodes)
