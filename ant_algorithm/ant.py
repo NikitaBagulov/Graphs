@@ -2,6 +2,9 @@ from node import Node
 from graph import Graph
 import random
 
+import matplotlib.pyplot as plt
+from IPython.display import clear_output
+
 class AntAlgorithm:
     def __init__(self, graph: Graph, num_ants: int, num_iterations: int, decay: float, alpha: float, beta: float):
         self.graph = graph
@@ -11,6 +14,8 @@ class AntAlgorithm:
         self.alpha = alpha
         self.beta = beta
         self.pheromones = {edge: 1.0 for edge in self.get_all_edges()}
+        self.iterations = []
+        self.distances = []
 
     def get_all_edges(self):
         edges = []
@@ -23,6 +28,9 @@ class AntAlgorithm:
         best_cycle = None
         best_distance = float('inf')
 
+        plt.ion()
+        fig, ax = plt.subplots()
+
         for iteration in range(self.num_iterations):
             all_cycles = []
             for _ in range(self.num_ants):
@@ -34,6 +42,22 @@ class AntAlgorithm:
                 all_cycles.append((cycle, distance))
             
             self.update_pheromones(all_cycles)
+
+            self.iterations.append(iteration + 1)
+            self.distances.append(best_distance)
+
+            clear_output(wait=True)
+            ax.clear()
+            ax.plot(self.iterations, self.distances, label='Best Distance')
+            ax.set_xlabel('Iteration')
+            ax.set_ylabel('Distance')
+            ax.set_title('Ant Algorithm Optimization')
+            ax.legend()
+            plt.draw()
+            plt.pause(0.1)
+
+        plt.ioff()
+        plt.show()
 
         return best_cycle, best_distance
 
@@ -63,8 +87,6 @@ class AntAlgorithm:
             return None, float('inf')
 
         return cycle, total_distance
-
-
 
     def select_next_node(self, current_node: Node, unvisited_nodes: set):
         neighbours = [(neighbour, weight) for neighbour, weight in current_node.nb_begin() if neighbour in unvisited_nodes]
@@ -96,4 +118,5 @@ class AntAlgorithm:
                     edge = (cycle[i], cycle[i + 1])
                     if edge in self.pheromones:
                         self.pheromones[edge] += pheromone_deposit
+
 
