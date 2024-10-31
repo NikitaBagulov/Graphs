@@ -37,9 +37,9 @@ class Graph:
     
     def load_from_file(self, filepath: str):
         with open(filepath, 'r') as f:
-            next(f)
+            # next(f)
             for line in f:
-                source, target, weight = line.strip().split()
+                source, target, weight = line.strip().split(",")
                 source_node = self.get_or_create_node(source)
                 target_node = self.get_or_create_node(target)
                 self.add_edge(source_node, target_node, int(weight))
