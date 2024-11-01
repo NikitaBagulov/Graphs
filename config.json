@@ -1,0 +1,7 @@
+{
+    "num_ants": 1,
+    "num_iterations": 100,
+    "decay": 0.0,
+    "alpha": 2.0,
+    "beta": 3.0
+}

@@ -2,6 +2,7 @@ from node import Node
 from graph import Graph
 import random
 import matplotlib.pyplot as plt
+import json
 
 class AntAlgorithm:
     def __init__(self, graph: Graph, num_ants: int, num_iterations: int, decay: float, alpha: float, beta: float):
@@ -11,13 +12,11 @@ class AntAlgorithm:
         self.decay = decay
         self.alpha = alpha
         self.beta = beta
-        # Добавление направленности рёбер: сохраняем феромоны для (node, neighbour)
-        self.pheromones = {(node, neighbour): 0.1 for node in self.graph.nodes for neighbour, _ in node.nb_begin()}
+        self.pheromones = {(node, neighbour): 0.01 for node in self.graph.nodes for neighbour, _ in node.nb_begin()}
         self.iterations = []
         self.distances = []
 
     def get_all_edges(self):
-        # Получаем все направленные рёбра
         edges = []
         for node in self.graph.nodes:
             for neighbour, weight in node.nb_begin():
@@ -27,23 +26,31 @@ class AntAlgorithm:
     def run(self):
         best_cycle = None
         best_distance = float('inf')
+        no_improvement_count = 0  
+        max_no_improvement = self.num_iterations
 
         plt.ion()
         fig, ax = plt.subplots()
 
-        for iteration in range(self.num_iterations):
+        iteration = 0
+        while no_improvement_count < max_no_improvement:
+            iteration += 1
             all_cycles = []
             for _ in range(self.num_ants):
                 cycle, distance = self.construct_solution()
                 if distance < best_distance:
                     best_distance = distance
                     best_cycle = cycle
-                    print(f"New best distance found: {best_distance} at iteration {iteration + 1}")
+                    print(f"New best distance found: {best_distance} at iteration {iteration}")
+                    no_improvement_count = 0  
+                else:
+                    no_improvement_count += 1  
+
                 all_cycles.append((cycle, distance))
             
             self.update_pheromones(all_cycles)
 
-            self.iterations.append(iteration + 1)
+            self.iterations.append(iteration)
             self.distances.append(best_distance)
 
             ax.clear()
@@ -65,7 +72,7 @@ class AntAlgorithm:
         current_node = start_node
         unvisited_nodes = set(self.graph.nodes)
         unvisited_nodes.remove(current_node)
-        print(f"Starting from node: {start_node}")
+        # print(f"Starting from node: {start_node}")
         
         cycle = [current_node]
         total_distance = 0
@@ -81,7 +88,6 @@ class AntAlgorithm:
             current_node = next_node
             unvisited_nodes.remove(next_node)
 
-        # Проверяем возможность возврата в начальный узел
         if start_node in current_node.neighbours:
             total_distance += current_node.neighbours[start_node]
             cycle.append(start_node)
@@ -91,7 +97,6 @@ class AntAlgorithm:
         return cycle, total_distance
 
     def select_next_node(self, current_node: Node, unvisited_nodes: set):
-        # Работаем только с направленными рёбрами (current_node -> neighbour)
         neighbours = [(neighbour, weight) for neighbour, weight in current_node.nb_begin() if neighbour in unvisited_nodes]
         
         if not neighbours:
@@ -102,7 +107,6 @@ class AntAlgorithm:
             for neighbour, weight in neighbours
         )
 
-        # Если феромонов на всех рёбрах нет, выбираем случайного соседа
         if total_pheromone == 0:
             return random.choice(neighbours)[0]
 
@@ -110,29 +114,38 @@ class AntAlgorithm:
         for neighbour, weight in neighbours:
             pheromone_level = self.pheromones[(current_node, neighbour)] ** self.alpha
             desirability = (1 / weight) ** self.beta
-            probability = pheromone_level * desirability / (total_pheromone + 1e-10)
+            probability = pheromone_level * desirability / total_pheromone
             probabilities.append(probability)
 
         chosen = random.choices(neighbours, weights=probabilities)[0][0]
         return chosen
 
-    #ПОПРАВИТЬ
     def update_pheromones(self, all_cycles):
-    # Испарение феромонов на всех рёбрах с учетом направленности
         for edge in self.pheromones.keys():
             self.pheromones[edge] *= (1 - self.decay)
 
-        # Обновление феромонов вдоль рёбер, пройденных в циклах
         for cycle, distance in all_cycles:
-            if cycle and len(set(cycle)) == len(self.graph.nodes) + 1:
-                pheromone_deposit = 1 / distance  # Чем короче путь, тем больше феромона
+            if cycle and len(cycle) == len(self.graph.nodes) + 1:
+                pheromone_deposit = 1 / distance if distance !=0 else 0
+                unique_edges = set()
+
                 for i in range(len(cycle) - 1):
-                    edge = (cycle[i], cycle[i + 1])  # Направленное ребро от текущего узла к следующему
-                    reverse_edge = (cycle[i + 1], cycle[i])  # Обратное направление
-
-                    # Обновляем только если это ребро есть в графе в нужном направлении
-                    if edge in self.pheromones:
+                    edge = (cycle[i], cycle[i + 1])  
+                    
+                    if edge not in unique_edges and edge in self.pheromones:
                         self.pheromones[edge] += pheromone_deposit
-                    if reverse_edge in self.pheromones:  # Обработка обратного направления (если присутствует)
-                        self.pheromones[reverse_edge] += pheromone_deposit
+                        unique_edges.add(edge)
 
+    @classmethod
+    def from_config(cls, config_file: str, graph: Graph):
+        with open(config_file, 'r') as file:
+            config = json.load(file)
+        
+        return cls(
+            graph=graph,
+            num_ants=config.get("num_ants", 1),
+            num_iterations=config.get("num_iterations", 100),
+            decay=config.get("decay", 0.1),
+            alpha=config.get("alpha", 1.0),
+            beta=config.get("beta", 2.0)
+        )

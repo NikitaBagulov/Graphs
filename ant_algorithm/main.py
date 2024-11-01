@@ -38,12 +38,14 @@ graph.load_from_file("/home/nikita/Документы/GitHub/Graphs/ant_algorith
 # graph.add_edge(node_g, node_d, 5)
 # graph.add_edge(node_g, node_f, 4)
 
-ant = AntAlgorithm(graph=graph,
-                 num_ants=1,
-                 num_iterations=2000,
-                 decay=0.2,
-                 alpha=3,
-                 beta=2)
+# ant = AntAlgorithm(graph=graph,
+#                  num_ants=1,
+#                  num_iterations=5000,
+#                  decay=0.2,
+#                  alpha=2,
+#                  beta=3)
+
+ant = AntAlgorithm.from_config("config.json", graph)
 
 best_cycle, best_distance = ant.run()
 print("Best Cycle:", [node.get_name() for node in best_cycle])
