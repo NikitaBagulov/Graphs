@@ -1,14 +1,16 @@
 import math
+import numpy as np
+
+DEPTH = 4
 
 class OthelloAI:
     def __init__(self, game_state, current_player):
-        self.game_state = game_state
+        self.game_state = np.array(game_state) 
         self.current_player = current_player
         self.opponent = 'black' if current_player == 'white' else 'white'
-        self.depth = 1
+        self.depth = DEPTH
 
     def is_valid_move(self, x, y):
-        """Проверяет, является ли ход на (x, y) допустимым для текущего игрока."""
         if self.game_state[x][y] is not None:
             return False
 
@@ -30,7 +32,6 @@ class OthelloAI:
         return False
 
     def make_move(self, game_state, x, y, player):
-        """Делает ход на (x, y) для указанного игрока и переворачивает фишки."""
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
         game_state[x][y] = player
 
@@ -52,7 +53,6 @@ class OthelloAI:
                 ny += dy
 
     def is_game_over(self, game_state):
-        """Проверяет, завершена ли игра (нет допустимых ходов для обоих игроков)."""
         for player in [self.current_player, self.opponent]:
             for x in range(8):
                 for y in range(8):
@@ -61,7 +61,6 @@ class OthelloAI:
         return True
 
     def is_valid_move_for_player(self, game_state, x, y, player):
-        """Проверяет, является ли ход на (x, y) допустимым для указанного игрока."""
         if game_state[x][y] is not None:
             return False
 
@@ -84,66 +83,70 @@ class OthelloAI:
 
         return False
 
+
     def get_best_move(self):
         best_score = -math.inf
         best_move = None
         alpha = -math.inf
         beta = math.inf
+        valid_moves = [(x,y) for x in range(8) for y in range(8) if self.is_valid_move(x,y)]
 
-        for x in range(8):
-            for y in range(8):
-                if self.is_valid_move(x, y):
-                    temp_game_state = [row[:] for row in self.game_state]
-                    self.make_move(temp_game_state, x, y, self.current_player)
-                    score = self.minimax(temp_game_state, self.depth - 1, alpha, beta, False)
-                    
-                    if score > best_score:
-                        best_score = score
-                        best_move = (x, y)
-                    
-                    alpha = max(alpha, score)
-                    if beta <= alpha:
-                        break
+        for x,y in valid_moves:
+            temp_game_state = np.copy(self.game_state)
+            self.make_move(temp_game_state,x,y,self.current_player)
+            score = self.minimax(temp_game_state,self.depth - 1 ,alpha ,beta ,False)
+            print(f"Move {x+1},{y+1} -> Score: {score}") if best_move is not None else print("None moves")
+            
+            if score > best_score:
+                best_score = score
+                best_move = (x,y)
+            
+            alpha = max(alpha ,score)
+            if beta <= alpha:
+                break
 
         return best_move
 
-    def minimax(self, game_state, depth, alpha, beta, is_maximizing):
+    def minimax(self ,game_state ,depth ,alpha ,beta ,is_maximizing):
         if depth == 0 or self.is_game_over(game_state):
-            return self.evaluate_board(game_state)
-
+            score = self.evaluate_board(game_state)
+            return score
+        
         if is_maximizing:
             max_eval = -math.inf
-            for x in range(8):
-                for y in range(8):
-                    if self.is_valid_move(x, y):
-                        temp_game_state = [row[:] for row in game_state]
-                        self.make_move(temp_game_state, x, y, self.current_player)
-                        eval = self.minimax(temp_game_state, depth - 1, alpha, beta, False)
-                        max_eval = max(max_eval, eval)
-                        alpha = max(alpha, eval)
-                        if beta <= alpha:
-                            break
+            
+            valid_moves = [(x,y) for x in range(8) for y in range(8) if self.is_valid_move(x,y)]
+            
+            for x,y in valid_moves:
+                temp_game_state = np.copy(game_state)
+                self.make_move(temp_game_state,x,y,self.current_player)
+                eval = self.minimax(temp_game_state ,depth-1 ,alpha ,beta ,False)
+                max_eval = max(max_eval ,eval)
+                alpha = max(alpha ,eval)
+                
+                if beta <= alpha:
+                    break
+            print("Max eval", max_eval)
             return max_eval
+        
         else:
             min_eval = math.inf
-            for x in range(8):
-                for y in range(8):
-                    if self.is_valid_move(x, y):
-                        temp_game_state = [row[:] for row in game_state]
-                        self.make_move(temp_game_state, x, y, self.current_player)
-                        eval = self.minimax(temp_game_state, depth - 1, alpha, beta, True)
-                        min_eval = min(min_eval, eval)
-                        beta = min(beta, eval)
-                        if beta <= alpha:
-                            break
+            
+
+            valid_moves = [(x,y) for x in range(8) for y in range(8) if self.is_valid_move(x,y)]
+            
+            for x,y in valid_moves:
+                temp_game_state = np.copy(game_state)
+                self.make_move(temp_game_state,x,y,self.opponent)
+                eval = self.minimax(temp_game_state ,depth-1 ,alpha ,beta ,True)
+                min_eval = min(min_eval ,eval)
+                beta = min(beta ,eval)
+                
+                if beta <= alpha:
+                    break
+            print("Min eval:",min_eval)
             return min_eval
 
-    def evaluate_board(self, game_state):
-        score = 0
-        for row in game_state:
-            for cell in row:
-                if cell == self.current_player:
-                    score += 1
-                elif cell is not None:
-                    score -= 1
+    def evaluate_board(self ,game_state):
+        score = np.sum(game_state == self.current_player) - np.sum(game_state == self.opponent)
         return score

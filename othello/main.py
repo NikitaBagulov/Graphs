@@ -1,7 +1,7 @@
 import tkinter as tk
 from ai import OthelloAI
 
-WIDTH, HEIGHT = 400, 400
+WIDTH, HEIGHT = 600, 600
 CELL_SIZE = WIDTH // 8
 
 class OthelloGame:
@@ -111,15 +111,19 @@ class OthelloGame:
         self.current_player = 'black' if self.current_player == 'white' else 'white'
         
         if self.current_player == 'black' and not self.game_over:
-            game_state, current_player = self.get_game_state()
-            ai = OthelloAI(game_state, current_player)
-            best_move = ai.get_best_move()
-            if best_move:
-                x, y = best_move
-                self.make_move(x, y)
+            self.root.after(1000, self.bot_move)
+        else:
+            self.draw_board()
 
-            self.current_player = 'white'
-        self.draw_board()
+    def bot_move(self):
+        game_state, current_player = self.get_game_state()
+        ai = OthelloAI(game_state, current_player)
+        best_move = ai.get_best_move()
+        print(f"Лучший ход: ({best_move[0]+1}, {best_move[1]+1})")
+        if best_move:
+            x, y = best_move
+            self.make_move(x, y)
+        self.switch_player()
 
     def get_game_state(self):
         return [row[:] for row in self.board], self.current_player
@@ -154,6 +158,8 @@ class OthelloGame:
         self.initialize_pieces()
         self.update_score()
         self.draw_board()
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
