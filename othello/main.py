@@ -1,6 +1,7 @@
 import tkinter as tk
 from ai import OthelloAI
 
+
 WIDTH, HEIGHT = 600, 600
 CELL_SIZE = WIDTH // 8
 
@@ -109,7 +110,15 @@ class OthelloGame:
 
     def switch_player(self):
         self.current_player = 'black' if self.current_player == 'white' else 'white'
-        
+
+        if not any(self.is_valid_move(x, y) for x in range(8) for y in range(8)):
+            if self.is_game_over():
+                self.game_over = True
+                self.show_winner()
+                return
+
+            self.current_player = 'black' if self.current_player == 'white' else 'white'
+
         if self.current_player == 'black' and not self.game_over:
             self.root.after(1000, self.bot_move)
         else:
@@ -138,8 +147,17 @@ class OthelloGame:
         self.score_label.config(text=f"White: {white_score} - Black: {black_score}")
 
     def is_game_over(self):
-        return all(self.board[i][j] is not None for i in range(8) for j in range(8)) or \
-               not any(self.is_valid_move(x, y) for x in range(8) for y in range(8))
+        current_moves_available = any(
+            self.is_valid_move(x, y) for x in range(8) for y in range(8)
+        )
+
+        opponent = 'black' if self.current_player == 'white' else 'white'
+        opponent_moves_available = any(
+            self.is_valid_move(x, y) for x in range(8) for y in range(8)
+        )
+
+        return not current_moves_available and not opponent_moves_available
+
 
     def show_winner(self):
         white_score, black_score = self.count_scores()
@@ -158,8 +176,6 @@ class OthelloGame:
         self.initialize_pieces()
         self.update_score()
         self.draw_board()
-
-
 
 if __name__ == "__main__":
     root = tk.Tk()

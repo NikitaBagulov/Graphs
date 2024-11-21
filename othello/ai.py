@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from graphviz import Digraph
 
 DEPTH = 4
 
@@ -9,6 +10,7 @@ class OthelloAI:
         self.current_player = current_player
         self.opponent = 'black' if current_player == 'white' else 'white'
         self.depth = DEPTH
+
 
     def is_valid_move(self, x, y):
         if self.game_state[x][y] is not None:
@@ -107,44 +109,34 @@ class OthelloAI:
 
         return best_move
 
-    def minimax(self ,game_state ,depth ,alpha ,beta ,is_maximizing):
+    def minimax(self, game_state, depth, alpha, beta, is_maximizing):
         if depth == 0 or self.is_game_over(game_state):
             score = self.evaluate_board(game_state)
             return score
-        
+
         if is_maximizing:
             max_eval = -math.inf
-            
-            valid_moves = [(x,y) for x in range(8) for y in range(8) if self.is_valid_move(x,y)]
-            
-            for x,y in valid_moves:
+            valid_moves = [(x, y) for x in range(8) for y in range(8) if self.is_valid_move(x, y)]
+            for x, y in valid_moves:
                 temp_game_state = np.copy(game_state)
-                self.make_move(temp_game_state,x,y,self.current_player)
-                eval = self.minimax(temp_game_state ,depth-1 ,alpha ,beta ,False)
-                max_eval = max(max_eval ,eval)
-                alpha = max(alpha ,eval)
-                
+                self.make_move(temp_game_state, x, y, self.current_player)
+                eval = self.minimax(temp_game_state, depth - 1, alpha, beta, False)
+                max_eval = max(max_eval, eval)
+                alpha = max(alpha, eval)
                 if beta <= alpha:
                     break
-            print("Max eval", max_eval)
             return max_eval
-        
         else:
             min_eval = math.inf
-            
-
-            valid_moves = [(x,y) for x in range(8) for y in range(8) if self.is_valid_move(x,y)]
-            
-            for x,y in valid_moves:
+            valid_moves = [(x, y) for x in range(8) for y in range(8) if self.is_valid_move(x, y)]
+            for x, y in valid_moves:
                 temp_game_state = np.copy(game_state)
-                self.make_move(temp_game_state,x,y,self.opponent)
-                eval = self.minimax(temp_game_state ,depth-1 ,alpha ,beta ,True)
-                min_eval = min(min_eval ,eval)
-                beta = min(beta ,eval)
-                
+                self.make_move(temp_game_state, x, y, self.opponent)
+                eval = self.minimax(temp_game_state, depth - 1, alpha, beta, True)
+                min_eval = min(min_eval, eval)
+                beta = min(beta, eval)
                 if beta <= alpha:
                     break
-            print("Min eval:",min_eval)
             return min_eval
 
     def evaluate_board(self ,game_state):
