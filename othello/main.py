@@ -88,7 +88,6 @@ class OthelloGame:
         return valid
 
     def make_move(self, x, y):
-        print(self.current_player)
         self.board[x][y] = self.current_player
 
         directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
@@ -127,7 +126,7 @@ class OthelloGame:
 
     def bot_move(self):
         game_state, current_player = self.get_game_state()
-        ai = OthelloAI(game_state, current_player)
+        ai = OthelloAI(game_state, current_player, visualize=True)
         best_move = ai.get_best_move()
         print(f"Лучший ход: ({best_move[0]+1}, {best_move[1]+1})")
         if best_move:
@@ -149,16 +148,11 @@ class OthelloGame:
         self.score_label.config(text=f"White: {white_score} - Black: {black_score}")
 
     def is_game_over(self):
-        current_moves_available = any(
+        moves_available = any(
             self.is_valid_move(x, y) for x in range(8) for y in range(8)
         )
 
-        opponent = 'black' if self.current_player == 'white' else 'white'
-        opponent_moves_available = any(
-            self.is_valid_move(x, y) for x in range(8) for y in range(8)
-        )
-
-        return not current_moves_available and not opponent_moves_available
+        return not moves_available
 
 
     def show_winner(self):
