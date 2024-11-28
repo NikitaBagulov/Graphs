@@ -13,7 +13,7 @@ class OthelloAI:
         self.dot = Digraph()
 
 
-    def is_valid_move(self, x, y):
+    def is_valid_move(self, x, y, player, opponent):
         if self.game_state[x][y] is not None:
             return False
 
@@ -23,9 +23,9 @@ class OthelloAI:
             found_opponent = False
 
             while 0 <= nx < 8 and 0 <= ny < 8:
-                if self.game_state[nx][ny] == self.opponent:
+                if self.game_state[nx][ny] == opponent:
                     found_opponent = True
-                elif self.game_state[nx][ny] == self.current_player and found_opponent:
+                elif self.game_state[nx][ny] == player and found_opponent:
                     return True
                 else:
                     break
@@ -107,7 +107,7 @@ class OthelloAI:
         best_move = None
         alpha = -math.inf
         beta = math.inf
-        valid_moves = [(x,y) for x in range(8) for y in range(8) if self.is_valid_move(x,y)]
+        valid_moves = [(x,y) for x in range(8) for y in range(8) if self.is_valid_move(x,y, self.current_player, self.opponent)]
 
         root_node_id = "root"
         self.visualize_board(self.game_state, 0, root_node_id)
@@ -135,13 +135,13 @@ class OthelloAI:
 
         if is_maximizing:
             max_eval = -math.inf
-            valid_moves = [(x, y) for x in range(8) for y in range(8) if self.is_valid_move(x, y)]
+            valid_moves = [(x, y) for x in range(8) for y in range(8) if self.is_valid_move(x, y, self.current_player, self.opponent)]
             for x, y in valid_moves:
                 temp_game_state = np.copy(game_state)
                 self.make_move(temp_game_state, x, y, self.current_player)
                 node_id = f"{parent_node_id}_max_{x}_{y}"
                 eval = self.minimax(temp_game_state, depth - 1, alpha, beta, False, node_id)
-                self.visualize_board(temp_game_state, eval, node_id, move_label=f"MOVED: {x+1},{y+1}")
+                self.visualize_board(temp_game_state, eval, node_id, move_label=f"MOVED: {x+1},{y+1} {self.current_player} max")
                 self.dot.edge(parent_node_id, node_id)
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, eval)
@@ -153,14 +153,14 @@ class OthelloAI:
             return max_eval
         else:
             min_eval = math.inf
-            valid_moves = [(x, y) for x in range(8) for y in range(8) if self.is_valid_move(x, y)]
+            valid_moves = [(x, y) for x in range(8) for y in range(8) if self.is_valid_move(x, y, self.opponent, self.current_player)]
             for x, y in valid_moves:
                 temp_game_state = np.copy(game_state)
                 self.make_move(temp_game_state, x, y, self.opponent)
                 node_id = f"{parent_node_id}_min_{x}_{y}"
                 eval = self.minimax(temp_game_state, depth - 1, alpha, beta, True, node_id)
                 
-                self.visualize_board(temp_game_state, eval, node_id, move_label=f"MOVED: {x+1},{y+1}")
+                self.visualize_board(temp_game_state, eval, node_id, move_label=f"MOVED: {x+1},{y+1} {self.opponent} min")
                 self.dot.edge(parent_node_id, node_id)
                 min_eval = min(min_eval, eval)
                 beta = min(beta, eval)
