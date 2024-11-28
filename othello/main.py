@@ -88,6 +88,7 @@ class OthelloGame:
         return valid
 
     def make_move(self, x, y):
+        print(self.current_player)
         self.board[x][y] = self.current_player
 
         directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
@@ -132,6 +133,8 @@ class OthelloGame:
         if best_move:
             x, y = best_move
             self.make_move(x, y)
+        game_state, current_player = self.get_game_state()
+        print(game_state)
         self.switch_player()
 
     def get_game_state(self):
