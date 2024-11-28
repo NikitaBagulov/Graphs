@@ -134,7 +134,6 @@ class OthelloGame:
             x, y = best_move
             self.make_move(x, y)
         game_state, current_player = self.get_game_state()
-        print(game_state)
         self.switch_player()
 
     def get_game_state(self):
