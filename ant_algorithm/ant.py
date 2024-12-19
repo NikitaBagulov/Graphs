@@ -66,25 +66,27 @@ class AntAlgorithm:
             # Сортируем вершины по количеству соседей (по возрастанию)
             nodes_list.sort(key=lambda node: len(node.neighbours))
 
-            # Ищем пары вершин для добавления рёбер
+            # Пытаемся найти пары вершин для добавления рёбер
             for i, u in enumerate(nodes_list):
                 for v in nodes_list[i + 1:]:
-                    # Если между вершинами нет рёбер
+                    # Если между вершинами нет рёбер, добавляем ребро
                     if v not in u.neighbours:
                         # Добавляем ребро между вершинами
-                        u.add_neighbour(v, 1.0)  # Предположим, что вес = 1.0
-                        v.add_neighbour(u, 1.0)
+                        u.add_neighbour(v, 1.0)  # Добавляем ребро с весом 1.0
+                        v.add_neighbour(u, 1.0)  # Добавляем обратное ребро
+                        self.pheromones[(u, v)] = 0.01  # Обновляем феромоны
+                        self.pheromones[(v, u)] = 0.01
                         added_edges.append((u, v))
 
-                        # После добавления ребра проверяем, стал ли граф гамильтоновым
+                        # Проверяем, стал ли граф гамильтоновым
                         if self.has_hamiltonian_cycle():
                             print("Граф стал гамильтоновым!")
                             return added_edges  # Возвращаем добавленные рёбра
                         print(f"Добавлено ребро: ({u}, {v}). Граф пока не имеет гамильтонова цикла.")
-                        break  # Переходим к следующей итерации внешнего цикла
-                else:
-                    continue
-                break
+
+            # Если после одного полного прохода не удалось создать гамильтонов цикл, попробуем добавить ещё рёбер.
+            # Это должно помочь избежать ситуации, когда цикл не образуется из-за нехватки рёбер.
+            print("Не удалось создать гамильтонов цикл на текущем шаге. Попробуем добавить больше рёбер.")
 
         return added_edges
 
@@ -107,8 +109,8 @@ class AntAlgorithm:
         """
         if not self.has_hamiltonian_cycle():
             print("Граф не имеет гамильтонова цикла.")
-            # added_ages = self.make_hamiltonian()
-            # print(len(added_ages))
+            added_ages = self.make_hamiltonian()
+            print(len(added_ages))
             # return None, float('inf')
         best_cycle = None  # Хранение лучшего найденного маршрута
         best_distance = float('inf')  # Хранение наименьшей длины маршрута
