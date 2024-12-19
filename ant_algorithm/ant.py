@@ -29,6 +29,66 @@ class AntAlgorithm:
         self.iterations = []  # Номер итерации
         self.distances = []   # Лучшие расстояния на каждой итерации
 
+    def has_hamiltonian_cycle(self):
+        """
+        Проверка, содержит ли граф хотя бы один гамильтонов цикл с использованием теоремы Ора.
+        :return: True, если гамильтонов цикл существует, иначе False.
+        """
+        n = len(self.graph.nodes)
+        if n < 3:
+            return False
+
+        nodes_list = list(self.graph.nodes)
+        for i, u in enumerate(nodes_list):
+            for v in nodes_list[i + 1:]:
+                if v not in u.neighbours:
+                    if len(u.neighbours) + len(v.neighbours) < n:
+                        return False
+
+        # Если условие теоремы выполняется, граф гамильтонов
+        return True
+
+    def make_hamiltonian(self):
+        """
+        Добавляет минимальное количество рёбер в существующий граф, чтобы он стал гамильтоновым.
+        Используется сортировка вершин по количеству соседей.
+        """
+        n = len(self.graph.nodes)
+        if n < 3:
+            print("Граф слишком мал, чтобы быть гамильтоновым.")
+            return []
+
+        nodes_list = list(self.graph.nodes)
+        added_edges = []
+
+        # Пока граф не станет гамильтоновым, добавляем рёбра
+        while not self.has_hamiltonian_cycle():
+            # Сортируем вершины по количеству соседей (по возрастанию)
+            nodes_list.sort(key=lambda node: len(node.neighbours))
+
+            # Ищем пары вершин для добавления рёбер
+            for i, u in enumerate(nodes_list):
+                for v in nodes_list[i + 1:]:
+                    # Если между вершинами нет рёбер
+                    if v not in u.neighbours:
+                        # Добавляем ребро между вершинами
+                        u.add_neighbour(v, 1.0)  # Предположим, что вес = 1.0
+                        v.add_neighbour(u, 1.0)
+                        added_edges.append((u, v))
+
+                        # После добавления ребра проверяем, стал ли граф гамильтоновым
+                        if self.has_hamiltonian_cycle():
+                            print("Граф стал гамильтоновым!")
+                            return added_edges  # Возвращаем добавленные рёбра
+                        print(f"Добавлено ребро: ({u}, {v}). Граф пока не имеет гамильтонова цикла.")
+                        break  # Переходим к следующей итерации внешнего цикла
+                else:
+                    continue
+                break
+
+        return added_edges
+
+
     def get_all_edges(self):
         """
         Получение всех ребер графа.
@@ -45,6 +105,11 @@ class AntAlgorithm:
         Основной метод для запуска алгоритма.
         :return: Лучший маршрут (цикл) и его длина.
         """
+        if not self.has_hamiltonian_cycle():
+            print("Граф не имеет гамильтонова цикла.")
+            # added_ages = self.make_hamiltonian()
+            # print(len(added_ages))
+            # return None, float('inf')
         best_cycle = None  # Хранение лучшего найденного маршрута
         best_distance = float('inf')  # Хранение наименьшей длины маршрута
         no_improvement_count = 0  # Счетчик итераций без улучшений

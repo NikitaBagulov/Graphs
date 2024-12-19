@@ -4,7 +4,8 @@ from node import Node
 
 graph = Graph()
 
-graph.load_from_file("/home/nikita/Документы/GitHub/Graphs/ant_algorithm/synthetic.txt")
+# graph.load_from_file("/home/nikita/Документы/GitHub/Graphs/ant_algorithm/synthetic.txt")
+graph.load_from_file("/home/nikita/Документы/GitHub/Graphs/ant_algorithm/1000.txt")
 
 # node_a = Node("a")
 # node_b = Node("b")
@@ -48,5 +49,7 @@ graph.load_from_file("/home/nikita/Документы/GitHub/Graphs/ant_algorith
 ant = AntAlgorithm.from_config("config.json", graph)
 
 best_cycle, best_distance = ant.run()
-print("Best Cycle:", [node.get_name() for node in best_cycle])
-print("Best Distance:", best_distance)
+if best_cycle is not None:
+    print("Best Cycle:", [node.get_name() for node in best_cycle])
+    print("Best Distance:", best_distance)
+
