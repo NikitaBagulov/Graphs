@@ -4,8 +4,8 @@ from node import Node
 
 graph = Graph()
 
-# graph.load_from_file("ant_algorithm/synthetic.txt")
-graph.load_from_file("ant_algorithm/1000.txt")
+graph.load_from_file("ant_algorithm/synthetic.txt")
+# graph.load_from_file("ant_algorithm/1000.txt")
 
 # node_a = Node("a")
 # node_b = Node("b")

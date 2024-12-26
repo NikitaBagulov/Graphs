@@ -5,14 +5,54 @@ import matplotlib.pyplot as plt
 import json
 import numpy as np
 
+class Ant:
+    def __init__(self, graph):
+        """
+        Инициализация муравья.
+        :param graph: Граф, в котором будет работать муравей.
+        """
+        self.graph = graph
+        self.path = []  # Пройденный путь (список узлов)
+        self.distance = 0  # Общая длина пройденного пути
+        self.probability = 0  # Вероятность выбора пути
+
+    def reset(self):
+        """Сбрасывает состояние муравья для новой итерации."""
+        self.path = []
+        self.distance = 0
+        self.probability = 0
+
+class AlphaAnt(Ant):
+    def __init__(self, graph):
+        super().__init__(graph)
+        self.alpha_mode = True
+        self.start_node = None
+
+    def select_next_node(self, current_node, unvisited_nodes):
+        """
+        Выбор следующего узла для альфа-муравья, который не учитывает феромоны, а выбирает кратчайший путь.
+        :param current_node: Текущий узел.
+        :param unvisited_nodes: Непосещенные узлы.
+        :return: Следующий узел.
+        """
+        # Получаем соседей текущего узла
+        neighbours = [(neighbour, weight) for neighbour, weight in current_node.nb_begin() if neighbour in unvisited_nodes]
+        
+        if not neighbours:
+            return None
+
+        next_node = min(neighbours, key=lambda x: x[1])[0]
+        return next_node
+
 
 
 class AntAlgorithm:
-    def __init__(self, graph: Graph, num_ants: int, num_iterations: int, decay: float, alpha: float, beta: float):
+    def __init__(self, graph: Graph, num_ants: int, num_alpha_ants:int, num_iterations: int, decay: float, alpha: float, beta: float):
         """
         Инициализация алгоритма.
         :param graph: Граф (объект класса Graph), содержащий узлы и ребра.
         :param num_ants: Количество муравьев в каждой итерации.
+        :param num_alpha_ants: Количество муравьев в каждой итерации.
         :param num_iterations: Максимальное число итераций.
         :param decay: Коэффициент испарения феромонов.
         :param alpha: Вес влияния уровня феромона.
@@ -20,6 +60,7 @@ class AntAlgorithm:
         """
         self.graph = graph
         self.num_ants = num_ants
+        self.num_alpha_ants = num_alpha_ants
         self.num_iterations = num_iterations
         self.decay = decay
         self.alpha = alpha
@@ -129,67 +170,79 @@ class AntAlgorithm:
         return edges
 
     def run(self):
-        """
-        Основной метод для запуска алгоритма.
-        :return: Лучший маршрут (цикл) и его длина.
-        """
-        if not self.has_hamiltonian_cycle():
-            print("Граф не имеет гамильтонова цикла.")
-            added_ages = self.make_hamiltonian()
-            print(len(added_ages))
-            # return None, float('inf')
         best_cycle = None  # Хранение лучшего найденного маршрута
         best_distance = float('inf')  # Хранение наименьшей длины маршрута
         no_improvement_count = 0  # Счетчик итераций без улучшений
         max_no_improvement = self.num_iterations  # Порог для завершения алгоритма
 
         # Настройка интерактивной визуализации
-        # plt.ion()
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 18))
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(12, 24))
 
         iteration = 0
-        probabilities = []  # Массив для хранения вероятностей
-        min_paths = []  # Массив для хранения минимальных 
+        probabilities = []  # Массив для хранения вероятностей лучшего пути
+        min_paths = []  # Массив для хранения минимальных расстояний
         all_pheromones = []
+        all_cycles = []
+        best_path_probability_per_iteration = []
+
+        # Создаем обычных и альфа-муравьев
+        ants = [Ant(self.graph) for _ in range(self.num_ants)]  # Обычные муравьи
+        alpha_ants = [AlphaAnt(self.graph) for _ in range(self.num_alpha_ants)]  # Альфа-муравьи
 
         while no_improvement_count < max_no_improvement:
             iteration += 1
-            all_cycles = []  # Список маршрутов, построенных всеми муравьями
             improved = False
 
-            # Цикл для муравьев
-            for _ in range(self.num_ants):
-                cycle, distance = self.construct_solution()
-                
-                # Обновляем данные
+            # Каждый муравей строит решение
+            for ant in ants:
+                cycle, distance = self.construct_solution(ant)
                 if distance < best_distance:
                     best_distance = distance
                     best_cycle = cycle
                     print(f"New best distance found: {best_distance} at iteration {iteration}")
                     improved = True
-                
+
                 if cycle is not None:
                     all_cycles.append((cycle, distance))
-                    self.update_pheromones(cycle, distance)
+                    self.update_pheromones(ant)
+
+            # Каждый альфа-муравей строит решение
+            for alpha_ant in alpha_ants:
+                self.construct_alpha_solution(alpha_ant)
+                if alpha_ant.path:  # Если альфа-муравей нашел путь, обновляем феромоны
+                    self.update_pheromones(alpha_ant)
 
             if not improved:
                 no_improvement_count += 1
             else:
-                no_improvement_count = 0  # Сброс счетчика при улучшении
-            # Испарение феромонов и запись данных для графиков
+                no_improvement_count = 0
+
             self.evaporate_pheromones()
             all_pheromones.append(self.pheromones.copy())
             self.iterations.append(iteration)
             self.distances.append(best_distance)
-            if iteration>1:
+
+            # Добавление минимальных путей, вероятностей и других метрик
+            if iteration > 1:
                 min_distance_in_iteration = min([distance for _, distance in all_cycles]) if all_cycles else min_paths[-1]
             else:
                 min_distance_in_iteration = None
             min_paths.append(min_distance_in_iteration)  # Добавляем текущую минимальную длину пути
-            # Обновление вероятности выбора лучшего маршрута
             probability_of_best_path = self.calculate_probability_of_best_path(best_cycle, self.pheromones)
             probabilities.append(probability_of_best_path)
-            
+
+            if best_cycle is not None:
+                product_of_probabilities = 1
+                for i in range(len(best_cycle) - 1):
+                    current_node = best_cycle[i]
+                    next_node = best_cycle[i + 1]
+                    probability = self.calculate_transition_probability(current_node, next_node)
+                    product_of_probabilities *= probability
+                best_path_probability_per_iteration.append(product_of_probabilities)
+            else:
+                best_path_probability_per_iteration.append(0)
+
+        # Построение графиков
         ax1.clear()
         ax1.plot(self.iterations, self.distances, label='Best Distance')
         ax1.set_xlabel('Iteration')
@@ -197,25 +250,32 @@ class AntAlgorithm:
         ax1.set_title('Ant Algorithm Optimization')
         ax1.legend()
 
-        
-
         ax2.clear()
         ax2.plot(self.iterations, min_paths, label='Minimum Path Length', color='green')
         ax2.set_xlabel('Iteration')
         ax2.set_ylabel('Minimum Path Length')
         ax2.set_title('Minimum Path Length Over Iterations')
         ax2.legend()
-        best_path_probabilities = [self.calculate_probability_of_best_path(best_cycle, pheromones) for pheromones in all_pheromones]
+
         ax3.clear()
-        ax3.plot(self.iterations, best_path_probabilities, label='Ratio of Best Path', color='orange')
+        ax3.plot(self.iterations, probabilities, label='Ratio of Best Path', color='orange')
         ax3.set_xlabel('Iteration')
         ax3.set_ylabel('Ratio')
         ax3.set_title('Ratio of Choosing Best Path')
         ax3.legend()
-        # plt.ioff()
+
+        # График вероятности лучшего пути
+        ax4.clear()
+        ax4.plot(self.iterations, best_path_probability_per_iteration, label='Best Path Probability', color='blue')
+        ax4.set_xlabel('Iteration')
+        ax4.set_ylabel('Probability')
+        ax4.set_title('History of Best Path Probability')
+        ax4.legend()
+
         plt.show()
 
         return best_cycle, best_distance
+
 
 
 
@@ -240,41 +300,68 @@ class AntAlgorithm:
         
         return probability
 
-    def construct_solution(self):
+    def construct_solution(self, ant: Ant):
         """
         Построение маршрута для одного муравья.
+        :param ant: Экземпляр класса Ant.
         :return: Построенный маршрут (цикл) и его длина.
         """
-        # Выбор случайного начального узла
-        start_node = random.choice(list(self.graph.nodes))
+        start_node = random.choice(list(self.graph.nodes))  # Случайный старт
         current_node = start_node
         unvisited_nodes = set(self.graph.nodes)
         unvisited_nodes.remove(current_node)
-        
-        cycle = [current_node]  # Начало маршрута
-        total_distance = 0  # Суммарная длина маршрута
+
+        ant.reset()  # Сбрасываем состояние муравья
+        ant.path.append(current_node)  # Начало маршрута
 
         # Пока есть непосещенные узлы
         while unvisited_nodes:
             next_node = self.select_next_node(current_node, unvisited_nodes)
-            
-            if next_node is None:  # Если невозможно продолжить маршрут
-                return None, float('inf')
+            if next_node is None:
+                return None, float('inf')  # Невозможно построить маршрут
 
-            # Добавление узла в маршрут и обновление длины
-            cycle.append(next_node)
-            total_distance += current_node.neighbours[next_node]
+            # Добавляем узел в маршрут и обновляем длину
+            ant.path.append(next_node)
+            ant.distance += current_node.neighbours[next_node]
             current_node = next_node
             unvisited_nodes.remove(next_node)
 
-        # Проверка возможности замкнуть цикл
+        # Проверка замыкания цикла
         if start_node in current_node.neighbours:
-            total_distance += current_node.neighbours[start_node]
-            cycle.append(start_node)
+            ant.path.append(start_node)
+            ant.distance += current_node.neighbours[start_node]
         else:
             return None, float('inf')
 
-        return cycle, total_distance
+        return ant.path, ant.distance
+    
+    def construct_alpha_solution(self, alpha_ant):
+        """
+        Строит маршрут для альфа-муравья, игнорируя феромоны.
+        :param alpha_ant: Альфа-муравей.
+        """
+        alpha_ant.start_node = random.choice(list(self.graph.nodes))
+        alpha_ant.reset()
+        current_node = alpha_ant.start_node
+        alpha_ant.path.append(current_node)
+        unvisited_nodes = set(self.graph.nodes)
+        unvisited_nodes.remove(current_node)
+        while unvisited_nodes:
+            next_node = self.select_next_node(current_node, unvisited_nodes)
+            if next_node is None:
+                break  # Невозможно построить маршрут
+
+            # Добавляем узел в маршрут и обновляем длину
+            alpha_ant.path.append(next_node)
+            alpha_ant.distance += current_node.neighbours[next_node]
+            current_node = next_node
+            unvisited_nodes.remove(next_node)
+
+        # Замыкаем цикл, если вернулись к началу
+        if alpha_ant.start_node in current_node.neighbours:
+            alpha_ant.path.append(alpha_ant.start_node)
+            alpha_ant.distance += current_node.neighbours[alpha_ant.start_node]
+
 
     def select_next_node(self, current_node: Node, unvisited_nodes: set):
         """
@@ -308,6 +395,22 @@ class AntAlgorithm:
         # Случайный выбор соседа с учетом вероятностей
         chosen = random.choices(neighbours, weights=probabilities)[0][0] #[(node_A, 10), (node_B, 20), (node_C, 15)] [0.2, 0.5, 0.3]
         return chosen
+    def calculate_transition_probability(self, current_node, next_node):
+        """
+        Расчет вероятности перехода между двумя узлами.
+        :param current_node: Текущий узел.
+        :param next_node: Следующий узел.
+        :return: Вероятность перехода.
+        """
+        pheromone_level = self.pheromones[(current_node, next_node)] ** self.alpha
+        weight = current_node.neighbours[next_node]
+        desirability = (1 / weight) ** self.beta
+        total_pheromone = sum(
+            self.pheromones[(current_node, neighbour)] ** self.alpha * (1 / current_node.neighbours[neighbour]) ** self.beta
+            for neighbour in current_node.neighbours
+        )
+        probability = pheromone_level * desirability / total_pheromone
+        return probability
 
     def evaporate_pheromones(self):
         """
@@ -318,22 +421,18 @@ class AntAlgorithm:
             self.pheromones[edge] *= (1 - self.decay)
 
 
-    def update_pheromones(self, cycle, distance):
+    def update_pheromones(self, ant: Ant):
         """
-        Обновление уровня феромонов на всех ребрах пути.
-        :param cycle: Маршрут, построенный муравьем.
-        :param distance: Длина маршрута, построенного муравьем.
+        Обновление уровня феромонов на всех ребрах пути муравья.
+        :param ant: Экземпляр класса Ant.
         """
-        # Добавление феромонов для маршрутов
-        # for cycle, distance in all_cycles:
-        if cycle and len(cycle) == len(self.graph.nodes) + 1:  # Проверка на замкнутый цикл
-            pheromone_deposit = 1 / distance if distance != 0 else 0  # Количество феромона зависит от длины маршрута
+        if ant.path and len(ant.path) == len(self.graph.nodes) + 1:  # Проверка на замкнутый цикл
+            pheromone_deposit = 1 / ant.distance if ant.distance != 0 else 0
             unique_edges = set()
 
             # Обновление феромонов только для уникальных ребер
-            for i in range(len(cycle) - 1):
-                edge = (cycle[i], cycle[i + 1])
-                
+            for i in range(len(ant.path) - 1):
+                edge = (ant.path[i], ant.path[i + 1])
                 if edge not in unique_edges and edge in self.pheromones:
                     self.pheromones[edge] += pheromone_deposit
                     unique_edges.add(edge)
@@ -352,6 +451,7 @@ class AntAlgorithm:
         return cls(
             graph=graph,
             num_ants=config.get("num_ants", 1),
+            num_alpha_ants=config.get("num_alpha_ants",1),
             num_iterations=config.get("num_iterations", 100),
             decay=config.get("decay", 0.1),
             alpha=config.get("alpha", 1.0),
