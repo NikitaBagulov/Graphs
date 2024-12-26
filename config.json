@@ -1,7 +1,7 @@
 {
     "num_ants": 1,
     "num_iterations": 100,
-    "decay": 0.0,
-    "alpha": 2.0,
-    "beta": 1.0
+    "decay": 0.1,
+    "alpha": 1.0,
+    "beta": 2.0
 }

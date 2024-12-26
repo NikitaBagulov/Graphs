@@ -1,4 +1,5 @@
 from node import Node
+import re
 
 class Graph:
     def __init__(self) -> None:
@@ -35,14 +36,31 @@ class Graph:
                 edges.append((node.get_name(), neighbour.get_name(), weight))
         return edges
     
+    # def load_from_file(self, filepath: str):
+    #     with open(filepath, 'r') as f:
+    #         # next(f)
+    #         for line in f:
+    #             source, target, weight = line.strip().split()
+    #             source_node = self.get_or_create_node(source)
+    #             target_node = self.get_or_create_node(target)
+    #             self.add_edge(source_node, target_node, int(weight))
     def load_from_file(self, filepath: str):
         with open(filepath, 'r') as f:
-            # next(f)
             for line in f:
-                source, target, weight = line.strip().split(",")
-                source_node = self.get_or_create_node(source)
-                target_node = self.get_or_create_node(target)
-                self.add_edge(source_node, target_node, int(weight))
+                # Убираем лишние пробелы в начале и в конце строки
+                line = line.strip()
+                
+                # Используем регулярные выражения, чтобы разделить строку по любому количеству пробелов, запятых, табуляций и других разделителей
+                parts = re.split(r'[,\s]+', line)
+                
+                if len(parts) == 3:
+                    source, target, weight = parts
+                    # Преобразуем строковые значения в нужные типы
+                    source_node = self.get_or_create_node(source)
+                    target_node = self.get_or_create_node(target)
+                    self.add_edge(source_node, target_node, int(weight))
+                else:
+                    continue  # Пропускаем строки, если формат некорректный
 
     def get_or_create_node(self, node_name: str) -> Node:
         for node in self.nodes:

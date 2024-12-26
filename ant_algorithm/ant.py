@@ -3,6 +3,9 @@ from graph import Graph
 import random
 import matplotlib.pyplot as plt
 import json
+import numpy as np
+
+
 
 class AntAlgorithm:
     def __init__(self, graph: Graph, num_ants: int, num_iterations: int, decay: float, alpha: float, beta: float):
@@ -41,12 +44,10 @@ class AntAlgorithm:
         nodes_list = list(self.graph.nodes)
         for i, u in enumerate(nodes_list):
             for v in nodes_list[i + 1:]:
-                if v not in u.neighbours:
-                    if len(u.neighbours) + len(v.neighbours) < n:
-                        return False
-
-        # Если условие теоремы выполняется, граф гамильтонов
-        return True
+                if v not in u.neighbours and u not in v.neighbours:
+                    if len(u.neighbours) + len(v.neighbours) >= n:
+                        return True
+        return False
 
     def make_hamiltonian(self):
         """
@@ -65,6 +66,7 @@ class AntAlgorithm:
         while not self.has_hamiltonian_cycle():
             # Сортируем вершины по количеству соседей (по возрастанию)
             nodes_list.sort(key=lambda node: len(node.neighbours))
+            print([n.neighbours for n in nodes_list[:10]])
 
             # Пытаемся найти пары вершин для добавления рёбер
             for i, u in enumerate(nodes_list):
@@ -72,10 +74,10 @@ class AntAlgorithm:
                     # Если между вершинами нет рёбер, добавляем ребро
                     if v not in u.neighbours:
                         # Добавляем ребро между вершинами
-                        u.add_neighbour(v, 1.0)  # Добавляем ребро с весом 1.0
-                        v.add_neighbour(u, 1.0)  # Добавляем обратное ребро
-                        self.pheromones[(u, v)] = 0.01  # Обновляем феромоны
-                        self.pheromones[(v, u)] = 0.01
+                        u.add_neighbour(v, 100.0)  # Добавляем ребро с весом 1.0
+                        # v.add_neighbour(u, 1.0)  # Добавляем обратное ребро
+                        self.pheromones[(u, v)] = 0.05  # Обновляем феромоны
+                        # self.pheromones[(v, u)] = 0.05
                         added_edges.append((u, v))
 
                         # Проверяем, стал ли граф гамильтоновым
@@ -90,6 +92,30 @@ class AntAlgorithm:
 
         return added_edges
 
+    def make_hamiltonian_simple(self):
+        """
+        Простейший алгоритм для превращения графа в гамильтонов:
+        соединяем любые две несоединённые вершины.
+        """
+        n = len(self.graph.nodes)
+        if n < 3:
+            print("Граф слишком мал, чтобы быть гамильтоновым.")
+            return []
+
+        added_edges = []
+
+        # Пробегаем по всем парам вершин
+        for u in self.graph.nodes:
+            for v in self.graph.nodes:
+                if u != v and v not in u.neighbours:
+                    # Соединяем несвязанные вершины
+                    u.add_neighbour(v, 1.0)
+                    self.pheromones[(u, v)] = 0.01  # Обновляем феромоны
+                    added_edges.append((u, v))
+                    print(f"Добавлено ребро: ({u}, {v}).")
+
+        print("Граф стал гамильтоновым (возможно избыточно).")
+        return added_edges
 
     def get_all_edges(self):
         """
@@ -163,26 +189,7 @@ class AntAlgorithm:
             # Обновление вероятности выбора лучшего маршрута
             probability_of_best_path = self.calculate_probability_of_best_path(best_cycle, self.pheromones)
             probabilities.append(probability_of_best_path)
-
-            # Обновление графиков визуализации
-            # ax1.clear()
-            # ax1.plot(self.iterations, self.distances, label='Best Distance')
-            # ax1.set_xlabel('Iteration')
-            # ax1.set_ylabel('Distance')
-            # ax1.set_title('Ant Algorithm Optimization')
-            # ax1.legend()
-
             
-
-            # ax2.clear()
-            # ax2.plot(self.iterations, min_paths, label='Minimum Path Length', color='green')
-            # ax2.set_xlabel('Iteration')
-            # ax2.set_ylabel('Minimum Path Length')
-            # ax2.set_title('Minimum Path Length Over Iterations')
-            # ax2.legend()
-
-            # plt.draw()
-            # plt.pause(0.1)
         ax1.clear()
         ax1.plot(self.iterations, self.distances, label='Best Distance')
         ax1.set_xlabel('Iteration')
