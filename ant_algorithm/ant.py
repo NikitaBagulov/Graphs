@@ -170,6 +170,10 @@ class AntAlgorithm:
         return edges
 
     def run(self):
+        if not self.has_hamiltonian_cycle():
+            print("Граф не имеет гамильтонова цикла.")
+            added_ages = self.make_hamiltonian_simple()
+            print(len(added_ages))
         best_cycle = None  # Хранение лучшего найденного маршрута
         best_distance = float('inf')  # Хранение наименьшей длины маршрута
         no_improvement_count = 0  # Счетчик итераций без улучшений
@@ -190,11 +194,13 @@ class AntAlgorithm:
         alpha_ants = [AlphaAnt(self.graph) for _ in range(self.num_alpha_ants)]  # Альфа-муравьи
 
         while no_improvement_count < max_no_improvement:
+            print(iteration)
             iteration += 1
             improved = False
 
             # Каждый муравей строит решение
-            for ant in ants:
+            for i, ant in enumerate(ants):
+                print(iteration, i)
                 cycle, distance = self.construct_solution(ant)
                 if distance < best_distance:
                     best_distance = distance
@@ -351,7 +357,6 @@ class AntAlgorithm:
             if next_node is None:
                 break  # Невозможно построить маршрут
 
-            # Добавляем узел в маршрут и обновляем длину
             alpha_ant.path.append(next_node)
             alpha_ant.distance += current_node.neighbours[next_node]
             current_node = next_node
@@ -361,6 +366,8 @@ class AntAlgorithm:
         if alpha_ant.start_node in current_node.neighbours:
             alpha_ant.path.append(alpha_ant.start_node)
             alpha_ant.distance += current_node.neighbours[alpha_ant.start_node]
+        else:
+            return None, float('inf')
 
 
     def select_next_node(self, current_node: Node, unvisited_nodes: set):
