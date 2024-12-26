@@ -92,8 +92,8 @@ class AntAlgorithm:
 
     def make_hamiltonian(self):
         """
-        Добавляет минимальное количество рёбер в существующий граф, чтобы он стал гамильтоновым.
-        Используется сортировка вершин по количеству соседей.
+        Добавляет рёбра в граф, чтобы он стал гамильтоновым.
+        Сначала соединяет изолированные вершины, затем обновляет список узлов на каждой итерации.
         """
         n = len(self.graph.nodes)
         if n < 3:
@@ -103,33 +103,41 @@ class AntAlgorithm:
         nodes_list = list(self.graph.nodes)
         added_edges = []
 
-        # Пока граф не станет гамильтоновым, добавляем рёбра
+        # Пока граф не станет гамильтоновым
         while not self.has_hamiltonian_cycle():
-            # Сортируем вершины по количеству соседей (по возрастанию)
+            # Находим изолированные вершины
+            isolated_nodes = [node for node in nodes_list if len(node.neighbours) == 0]
+            non_isolated_nodes = [node for node in nodes_list if len(node.neighbours) > 0]
+
+            # Соединяем изолированные вершины с наиболее связанными
+            for isolated in isolated_nodes:
+                for non_isolated in sorted(non_isolated_nodes, key=lambda node: len(node.neighbours), reverse=True):
+                    if non_isolated not in isolated.neighbours:
+                        isolated.add_neighbour(non_isolated, 1.0)
+                        self.pheromones[(isolated, non_isolated)] = 0.05
+                        added_edges.append((isolated, non_isolated))
+                        print(f"Добавлено ребро для изолированной вершины: {isolated} - {non_isolated}")
+                        break  # Каждой изолированной вершине добавляем только одно ребро
+
+            # Пересортируем список узлов по количеству соседей
             nodes_list.sort(key=lambda node: len(node.neighbours))
-            print([n.neighbours for n in nodes_list[:10]])
 
-            # Пытаемся найти пары вершин для добавления рёбер
-            for i, u in enumerate(nodes_list):
-                for v in nodes_list[i + 1:]:
-                    # Если между вершинами нет рёбер, добавляем ребро
-                    if v not in u.neighbours:
-                        # Добавляем ребро между вершинами
-                        u.add_neighbour(v, 100.0)  # Добавляем ребро с весом 1.0
-                        # v.add_neighbour(u, 1.0)  # Добавляем обратное ребро
-                        self.pheromones[(u, v)] = 0.05  # Обновляем феромоны
-                        # self.pheromones[(v, u)] = 0.05
+            # Добавляем рёбра для вершин с меньшим числом соседей
+            for u in nodes_list:
+                for v in nodes_list:
+                    if v != u and v not in u.neighbours and u not in v.neighbours:
+                        u.add_neighbour(v, 1.0)
+                        self.pheromones[(u, v)] = 0.05
                         added_edges.append((u, v))
+                        print(f"Добавлено ребро: {u} - {v}")
+                        break  # Каждой вершине добавляем только одно ребро за итерацию
 
-                        # Проверяем, стал ли граф гамильтоновым
-                        if self.has_hamiltonian_cycle():
-                            print("Граф стал гамильтоновым!")
-                            return added_edges  # Возвращаем добавленные рёбра
-                        print(f"Добавлено ребро: ({u}, {v}). Граф пока не имеет гамильтонова цикла.")
+            # Проверяем, стал ли граф гамильтоновым
+            if self.has_hamiltonian_cycle():
+                print("Граф стал гамильтоновым!")
+                return added_edges
 
-            # Если после одного полного прохода не удалось создать гамильтонов цикл, попробуем добавить ещё рёбер.
-            # Это должно помочь избежать ситуации, когда цикл не образуется из-за нехватки рёбер.
-            print("Не удалось создать гамильтонов цикл на текущем шаге. Попробуем добавить больше рёбер.")
+            print("Граф ещё не стал гамильтоновым. Добавляем новые рёбра.")
 
         return added_edges
 
@@ -170,10 +178,15 @@ class AntAlgorithm:
         return edges
 
     def run(self):
+        edges_before = len(self.graph.display_edges())
         if not self.has_hamiltonian_cycle():
             print("Граф не имеет гамильтонова цикла.")
-            added_ages = self.make_hamiltonian_simple()
+            added_ages = self.make_hamiltonian()
             print(len(added_ages))
+            edges_after = len(self.graph.display_edges())
+            print(f"Количество рёбер до: {edges_before}")
+            print(f"Количество добавленных рёбер: {len(added_ages)}")
+            print(f"Количество рёбер после: {edges_after}")
         best_cycle = None  # Хранение лучшего найденного маршрута
         best_distance = float('inf')  # Хранение наименьшей длины маршрута
         no_improvement_count = 0  # Счетчик итераций без улучшений
@@ -324,6 +337,7 @@ class AntAlgorithm:
         while unvisited_nodes:
             next_node = self.select_next_node(current_node, unvisited_nodes)
             if next_node is None:
+                print("No next node")
                 return None, float('inf')  # Невозможно построить маршрут
 
             # Добавляем узел в маршрут и обновляем длину
@@ -334,9 +348,11 @@ class AntAlgorithm:
 
         # Проверка замыкания цикла
         if start_node in current_node.neighbours:
+
             ant.path.append(start_node)
             ant.distance += current_node.neighbours[start_node]
         else:
+            print("No cycle found")
             return None, float('inf')
 
         return ant.path, ant.distance
@@ -381,6 +397,7 @@ class AntAlgorithm:
         neighbours = [(neighbour, weight) for neighbour, weight in current_node.nb_begin() if neighbour in unvisited_nodes]
         
         if not neighbours:
+            print("No neighbours")
             return None  # Если нет доступных соседей, маршрут завершить нельзя
 
         # Расчет общей суммы "привлекательностей" переходов
